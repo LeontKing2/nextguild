@@ -187,9 +187,9 @@ class Client:
     def ban_member(self, serverid, userid, reason=None):
         url = f'{self.base_url}/servers/{serverid}/bans/{userid}'
         if reason:
-          response = self.request('POST', url, data = {'reason': reason})
+            response = self.request('POST', url, data={'reason': reason})
         else:
-          response = self.request('POST', url)
+            response = self.request('POST', url)
         return response
 
     def add_role(self, serverid, userid, roleid):
@@ -614,22 +614,22 @@ class Client:
     def get_bot_user_id(self):
         response = requests.get(f'https://www.guilded.gg/api/v1/users/@me', headers=self.headers)
         return response.json()['user']['id']
-    
+
     def member_is_owner(self, serverid, userid):
         r = self.get_server(serverid)
         response = r['server']['ownerId']
         uid = userid['id']
         if uid == response:
-          return True
+            return True
         else:
-          return False
+            return False
 
     def member_has_role(self, serverid, userid, roleid):
         l = self.get_member_roles(serverid, userid)
         if int(roleid) in l:
-          return True
+            return True
         else:
-          return False
+            return False
 
 
 class Embed:
@@ -707,7 +707,7 @@ class Message:
         except:
             self.messageId = []
         try:
-          self.mentions = [user['id'] for user in eventData['message']['mentions']['users']]
+            self.mentions = [user['id'] for user in eventData['message']['mentions']['users']]
         except:
             self.mentions = []
 
@@ -723,6 +723,7 @@ class Reaction:
         self.emoteid = eventData['reaction']['emote']['id']
         self.emote_url = eventData['reaction']['emote']['url']
 
+
 class CalendarReaction:
     def __init__(self, eventData):
         print(eventData)
@@ -734,6 +735,7 @@ class CalendarReaction:
         self.emoteid = eventData['reaction']['emote']['id']
         self.emote_url = eventData['reaction']['emote']['url']
         self.calendar_event_id = eventData['reaction']['calendarEventId']
+
 
 class ForumTopicCommentReaction:
     def __init__(self, eventData):
@@ -748,6 +750,29 @@ class ForumTopicCommentReaction:
         self.forumTopicId = eventData['reaction']['forumTopicId']
         self.forumTopicCommentId = eventData['reaction']['forumTopicCommentId']
 
+class Channel:
+    def __init__(self, eventData):
+        self.eventData = eventData
+        print(eventData)
+        self.channelId = eventData['channel']['id']
+        self.channelName = eventData['channel']['name']
+        self.channelType = eventData['channel']['type']
+        self.serverId = eventData['serverId']
+        self.groupId = eventData['channel']['groupId']
+        self.createdBy = eventData['channel']['createdBy']
+
+
+class Webhook:
+    def __init__(self, eventData):
+        self.eventData = eventData
+        print(eventData)
+        self.webhookId = eventData['webhook']['id']
+        self.webhookName = eventData['webhook']['name']
+        self.channelId = eventData['webhook']['channelId']
+        self.serverId = eventData['serverId']
+        self.createdAt = eventData['webhook']['createdAt']
+        self.createdBy = eventData['webhook']['createdBy']
+
 
 class Events:
     def __init__(self, client):
@@ -756,6 +781,8 @@ class Events:
         self._message_delete_handlers = []
         self._member_join_handlers = []
         self._member_leave_handlers = []
+        self._bot_join_handlers = []
+        self._bot_leave_handlers = []
         self._member_banned_handlers = []
         self._member_unbanned_handlers = []
         self._ready_handlers = []
@@ -765,7 +792,14 @@ class Events:
         self._forum_topic_comment_reaction_delete_handlers = []
         self._calendar_event_reaction_create_handlers = []
         self._calendar_event_reaction_delete_handlers = []
+        self._channel_create_handlers = []
+        self._channel_delete_handlers = []
+        self._channel_update_handlers = []
+        self._webhook_create_handlers = []
+        self._webhook_delete_handlers = []
+        self._webhook_update_handlers = []
         self.client = client
+
 
     def on_message(self, func):
         @wraps(func)
@@ -813,6 +847,7 @@ class Events:
 
         self._member_join_handlers.append(wrapper)
         return wrapper
+
 
     async def _handle_member_join(self, eventData):
         for handler in self._member_join_handlers:
@@ -944,6 +979,79 @@ class Events:
         for handler in self._calendar_event_reaction_delete_handlers:
             await handler(reaction)
 
+    def on_channel_create(self, func):
+        @wraps(func)
+        def wrapper(channel):
+            return func(channel)
+
+        self._channel_create_handlers.append(wrapper)
+        return wrapper
+
+    async def _handle_create_channel(self, eventData):
+      channel = Channel(eventData)
+      for handler in self._channel_create_handlers:
+        await handler(channel)
+
+
+    def on_channel_delete(self, func):
+        @wraps(func)
+        def wrapper(channel):
+            return func(channel)
+
+        self._channel_delete_handlers.append(wrapper)
+        return wrapper
+
+
+    async def _handle_delete_channel(self, eventData):
+        channel = Channel(eventData)
+        for handler in self._channel_delete_handlers:
+            await handler(channel)
+
+    def on_channel_update(self, func):
+        @wraps(func)
+        def wrapper(channel):
+            return func(channel)
+
+        self._channel_update_handlers.append(wrapper)
+        return wrapper
+
+    async def _handle_update_channel(self, eventData):
+        channel = Channel(eventData)
+        for handler in self._channel_update_handlers:
+            await handler(channel)
+
+
+    def on_webhook_create(self, func):
+        @wraps(func)
+        def wrapper(webhook):
+            return func(webhook)
+
+        self._webhook_create_handlers.append(wrapper)
+        return wrapper
+
+    async def _handle_create_webhook(self, eventData):
+        webhook = Webhook(eventData)
+        for handler in self._webhook_create_handlers:
+            await handler(webhook)
+
+    def on_webhook_update(self, func):
+        @wraps(func)
+        def wrapper(webhook):
+            return func(webhook)
+
+        self._webhook_update_handlers.append(wrapper)
+        return wrapper
+
+    async def _handle_update_webhook(self, eventData):
+        webhook = Webhook(eventData)
+        for handler in self._webhook_update_handlers:
+            await handler(webhook)
+
+
+
+
+
+
     async def start(self):
         async with websockets.connect('wss://www.guilded.gg/websocket/v1',
                                       extra_headers={'Authorization': f'Bearer {self.client.token}'}) as websocket:
@@ -970,7 +1078,12 @@ class Events:
                     'ForumTopicCommentReactionCreated': self._handle_forum_topic_comment_reaction_create,
                     'ForumTopicCommentReactionDeleted': self._handle_forum_topic_comment_reaction_delete,
                     'CalendarEventReactionCreated': self._handle_calendar_event_reaction_create,
-                    'CalendarEventReactionDeleted': self._handle_calendar_event_reaction_delete
+                    'CalendarEventReactionDeleted': self._handle_calendar_event_reaction_delete,
+                    'ServerChannelCreated': self._handle_create_channel,
+                    'ServerChannelDeleted': self._handle_delete_channel,
+                    'ServerChannelUpdated': self._handle_update_channel,
+                    'ServerWebhookCreated': self._handle_create_webhook,
+                    'ServerWebhookUpdated': self._handle_update_webhook
 
                 }
                 handler = event_handlers.get(eventType)
