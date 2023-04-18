@@ -1250,6 +1250,54 @@ class Client:
         )
         return response
 
+
+    def create_announcement(self, channel_id: str, title: str, content: str):
+        data = {'title': title, 'content': content}
+
+        response = self.request(
+            'POST',
+            f'{self.base_url}/channels/{channel_id}/announcements',
+            json=data
+        )
+        return response
+
+
+    def get_announcements(self, channel_id: str, before: datetime = None, limit: int = None):
+        params = {}
+
+        if before:
+            params['before'] = before.isoformat()
+
+        if limit:
+            params['limit'] = limit
+
+        response = self.request(
+            'GET',
+            f'{self.base_url}/channels/{channel_id}/announcements',
+            params=params
+        )
+        return response
+
+
+    def read_announcement(self, channel_id: str, announcement_id: str):
+        response = self.request(
+            'GET',
+            f'{self.base_url}/channels/{channel_id}/announcements/{announcement_id}'
+        )
+        return response
+
+
+    def update_announcement(self, channel_id: str, announcement_id: str, title: str, content: str):
+        data = {'title': title, 'content': content}
+
+        response = self.request(
+            'PUT',
+            f'{self.base_url}/channels/{channel_id}/announcements/{announcement_id}',
+            json=data
+        )
+        return response
+
+
     def get_bot_user_id(self):
         response = requests.get(f'/users/@me', headers=self.headers)
         return response.json()['user']['id']
